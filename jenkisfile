@@ -1,0 +1,101 @@
+pipeline {
+  agent any
+
+  environment {
+    AWS_PROFILE       = 'terraform-user'
+    AWS_REGION        = 'us-east-1'
+    TF_WORKSPACE      = 'infraCar'
+    ANSIBLE_DIR       = 'configManagement-carPrice'
+    INVENTORY_SCRIPT  = "${ANSIBLE_DIR}/generate_inventory.sh"
+    INVENTORY_FILE    = "${ANSIBLE_DIR}/inventory.ini"
+    PLAYBOOK_FILE     = "${ANSIBLE_DIR}/playbook.yml"
+  }
+
+
+
+  stages {
+
+    stage('Clone Repositories') {
+        steps {
+            // Limpia el workspace antes de clonar
+            deleteDir()
+
+            // Clona el repo de infraestructura (Terraform)
+            dir('infra') {
+            git branch: 'main', url: 'https://github.com/tu-usuario/infraestructura-carprice.git'
+            }
+
+            // Clona el repo de configuración (Ansible)
+            dir('configManagement-carPrice') {
+            git branch: 'main', url: 'https://github.com/andreaendigital/configManagement-carPrice'
+            }
+        }
+    }
+
+
+    stage('Terraform Init') {
+      steps {
+        dir('infra') {
+          sh 'terraform init'
+        }
+      }
+    }
+
+    stage('Terraform Plan') {
+      steps {
+        dir('infra') {
+          sh 'terraform plan -out=tfplan'
+        }
+      }
+    }
+
+    stage('Terraform Apply') {
+      steps {
+        dir('infra') {
+          input message: '¿Aplicar cambios en infraestructura?'
+          sh 'terraform apply tfplan'
+        }
+      }
+    }
+
+  stage('Generate Ansible Inventory') {
+      steps {
+        sh "${INVENTORY_SCRIPT}"
+      }
+    }
+
+    stage('Run Ansible Playbook') {
+      steps {
+        sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+      }
+    }
+
+    stage('Post-Deploy: SSH EC2') {
+  when {
+    expression { return fileExists('infra/terraform.tfstate') }
+  }
+  steps {
+    echo '🔍 Connecting to EC2 to verify deployment...'
+
+    script {
+      def ec2_ip = sh(script: "cd infra && terraform output -raw public_ip", returnStdout: true).trim()
+      env.EC2_PUBLIC_IP = ec2_ip
+    }
+
+    sh """
+      ssh -o StrictHostKeyChecking=no -i ~/.ssh/demoCar-jenkins_key.pem ec2-user@${EC2_PUBLIC_IP} \\
+      'systemctl status carprice'
+    """
+  }
+}
+
+
+  post {
+    success {
+      echo '✅ Deployment completed successfully!'
+    }
+    failure {
+      echo '❌ Deployment failed. Check logs and Terraform state.'
+    }
+  }
+}
