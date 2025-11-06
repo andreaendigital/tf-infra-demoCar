@@ -1,10 +1,15 @@
 pipeline {
   agent any
 
+
+    parameters {
+        booleanParam(name: 'PLAN_TERRAFORM', defaultValue: true, description: 'Run terraform plan to preview infrastructure changes')
+        booleanParam(name: 'APPLY_TERRAFORM', defaultValue: true, description: 'Apply infrastructure changes using terraform apply')
+        booleanParam(name: 'DEPLOY_ANSIBLE', defaultValue: true, description: 'Run Ansible to deploy the Flask application')
+        booleanParam(name: 'DESTROY_TERRAFORM', defaultValue: false, description: 'Destroy infrastructure using terraform destroy')
+    }
+
   environment {
-    AWS_PROFILE       = 'terraform-user'
-    AWS_REGION        = 'us-east-1'
-    TF_WORKSPACE      = 'infraCar'
     ANSIBLE_DIR       = 'configManagement-carPrice'
     INVENTORY_SCRIPT  = "${ANSIBLE_DIR}/generate_inventory.sh"
     INVENTORY_FILE    = "${ANSIBLE_DIR}/inventory.ini"
@@ -13,89 +18,127 @@ pipeline {
 
 
 
-  stages {
 
-    stage('Clone Repositories') {
+    stages {
+
+        stage('Clone Repositories') {
+            steps {
+                // Limpia el workspace antes de clonar
+                deleteDir()
+
+                // Clona el repo de infraestructura (Terraform)
+                dir('infra') {
+                git branch: 'main', url: 'https://github.com/andreaendigital/tf-infra-demoCar'
+                }
+
+                // Clona el repo de configuración (Ansible)
+                dir('configManagement-carPrice') {
+                git branch: 'main', url: 'https://github.com/andreaendigital/configManagement-carPrice'
+                }
+            }
+        }
+
+
+        stage('Terraform Init') {
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
+                dir('infra') {
+                    sh 'terraform init'
+                }
+                }
+            }
+        }
+
+        stage('Terraform Plan') {
+            when {
+                expression { return params.PLAN_TERRAFORM }
+            }
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
+                dir('infra') {
+                    sh 'terraform plan -out=tfplan'
+                }
+                }
+            }
+        }
+
+        stage('Terraform Apply') {
+        when {
+            expression { return params.APPLY_TERRAFORM }
+        }
         steps {
-            // Limpia el workspace antes de clonar
-            deleteDir()
-
-            // Clona el repo de infraestructura (Terraform)
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
             dir('infra') {
-            git branch: 'main', url: 'https://github.com/tu-usuario/infraestructura-carprice.git'
+                input message: '¿Aplicar cambios en infraestructura?'
+                sh 'terraform apply tfplan'
             }
-
-            // Clona el repo de configuración (Ansible)
-            dir('configManagement-carPrice') {
-            git branch: 'main', url: 'https://github.com/andreaendigital/configManagement-carPrice'
             }
         }
-    }
-
-
-    stage('Terraform Init') {
-      steps {
-        dir('infra') {
-          sh 'terraform init'
         }
-      }
-    }
 
-    stage('Terraform Plan') {
-      steps {
-        dir('infra') {
-          sh 'terraform plan -out=tfplan'
+        stage('Terraform Destroy') {
+        when {
+            expression { return params.DESTROY_TERRAFORM }
         }
-      }
-    }
-
-    stage('Terraform Apply') {
-      steps {
-        dir('infra') {
-          input message: '¿Aplicar cambios en infraestructura?'
-          sh 'terraform apply tfplan'
+        steps {
+            withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
+            dir('infra') {
+                input message: '¿Destruir infraestructura?'
+                sh 'terraform destroy -auto-approve'
+            }
+            }
         }
-      }
+        }
+
+
+
+        stage('Generate Ansible Inventory') {
+            when {
+                expression { return params.DEPLOY_ANSIBLE }
+            }
+            steps {
+                sh "${INVENTORY_SCRIPT}"
+            }
+        }
+
+        stage('Run Ansible Playbook') {
+            when {
+                expression { return params.DEPLOY_ANSIBLE }
+            }
+            steps {
+                sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+            }
+        }
+
+
+        stage('Post-Deploy: SSH EC2') {
+            when {
+                expression { return params.DEPLOY_ANSIBLE }
+
+            }
+            steps {
+                    echo 'Connecting to EC2 to verify deployment...'
+
+                    script {
+                    def ec2_ip = sh(script: "cd infra && terraform output -raw public_ip", returnStdout: true).trim()
+                    env.EC2_PUBLIC_IP = ec2_ip
+                    }
+
+                sh """
+                ssh -o StrictHostKeyChecking=no -i ~/.ssh/demoCar-jenkins_key.pem ec2-user@${EC2_PUBLIC_IP} \\
+                'systemctl status carprice'
+                """
+            }
+        }
+
+
+        post {
+            success {
+            echo 'Deployment completed successfully!'
+            }
+            failure {
+            echo 'Deployment failed. Check logs and Terraform state.'
+            }
+        }
     }
-
-  stage('Generate Ansible Inventory') {
-      steps {
-        sh "${INVENTORY_SCRIPT}"
-      }
-    }
-
-    stage('Run Ansible Playbook') {
-      steps {
-        sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
-      }
-    }
-
-    stage('Post-Deploy: SSH EC2') {
-  when {
-    expression { return fileExists('infra/terraform.tfstate') }
-  }
-  steps {
-    echo '🔍 Connecting to EC2 to verify deployment...'
-
-    script {
-      def ec2_ip = sh(script: "cd infra && terraform output -raw public_ip", returnStdout: true).trim()
-      env.EC2_PUBLIC_IP = ec2_ip
-    }
-
-    sh """
-      ssh -o StrictHostKeyChecking=no -i ~/.ssh/demoCar-jenkins_key.pem ec2-user@${EC2_PUBLIC_IP} \\
-      'systemctl status carprice'
-    """
-  }
-}
-
-
-  post {
-    success {
-      echo '✅ Deployment completed successfully!'
-    }
-    failure {
-      echo '❌ Deployment failed. Check logs and Terraform state.'
-    }
-  }
 }
