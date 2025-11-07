@@ -128,7 +128,7 @@ pipeline {
             // 1. INYECTAR CREDENCIALES AWS para TERRAFORM OUTPUT
             withCredentials([
                 // REEMPLAZA 'aws-creds-id' con el ID de tu credencial AWS real
-                [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id'] 
+                [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice'] 
             ]) {
                 script {
                     // Leer la IP pública del EC2 usando el output que ya corregiste
