@@ -65,7 +65,7 @@ module "alb" {
 
 module "rds_db_instance" {
   source               = "./rds"
-  db_subnet_group_name = "infraCar_rds_subnet_group"
+  db_subnet_group_name = "infracar-rds-subnet-group"
   subnet_groups        = tolist(module.networking.infraCar_public_subnets)
   rds_mysql_sg_id      = module.security_group.rds_mysql_sg_id
   mysql_db_identifier  = "mydb"
