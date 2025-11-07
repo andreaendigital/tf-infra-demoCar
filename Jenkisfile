@@ -43,6 +43,7 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
                     dir('infra') {
+                        sh 'export AWS_PROFILE=""'
                         sh 'terraform init'
                     }
                 }
