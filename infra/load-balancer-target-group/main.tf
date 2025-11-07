@@ -12,7 +12,7 @@ output "infraCar_lb_target_group_arn" {
 }
 
 # Target Group Resource
-resource "aws_lb_target_group" "dev_proj_1_lb_target_group" {
+resource "aws_lb_target_group" "infraCar_lb_target_group" {
   name     = var.lb_target_group_name
   port     = var.lb_target_group_port
   protocol = var.lb_target_group_protocol

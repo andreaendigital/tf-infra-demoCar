@@ -24,7 +24,7 @@ output "infraCar_public_subnet_cidrs_blocks" {
 
 
 # Setup VPC
-resource "aws_vpc" "infraCar_vpc" {
+resource "aws_vpc" "infraCar_vpc_us_east_1" {
 
   cidr_block = var.vpc_cidr
   tags = {
