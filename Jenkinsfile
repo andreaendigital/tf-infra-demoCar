@@ -152,12 +152,12 @@ pipeline {
     }
 
     post {
-            success {
+        success {
             echo 'Deployment completed successfully!'
-            }
-            failure {
+        }
+        failure {
             echo 'Deployment failed. Check logs and Terraform state.'
-            }
+        }
     }
 
 
