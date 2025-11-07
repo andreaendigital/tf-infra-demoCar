@@ -98,6 +98,7 @@ pipeline {
                 expression { return params.DEPLOY_ANSIBLE }
             }
             steps {
+                sh "chmod +x ${INVENTORY_SCRIPT}"
                 sh "${INVENTORY_SCRIPT}"
             }
         }
