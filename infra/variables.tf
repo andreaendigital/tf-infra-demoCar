@@ -78,9 +78,7 @@ variable "enable_public_ip_address" {
   description = "Whether to associate a public IP address with the EC2 instance"
   type        = bool
 }
-variable "ec2_sg_name_for_python_api" {
-  description = "Security Group ID for Python API access"
-}
+
 
 # Load Balancer
 variable "lb_name" {
@@ -106,9 +104,6 @@ variable "lb_target_group_arn" {
   description = "ARN of the target group to attach EC2 instance"
 }
 
-variable "ec2_instance_id" {
-  description = "ID of the EC2 instance to attach to the target group"
-}
 
 variable "lb_listner_port" {
   description = "Port for the Load Balancer listener (e.g., 80)"
