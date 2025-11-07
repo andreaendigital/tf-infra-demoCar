@@ -12,7 +12,7 @@ output "infraCar_vpc_id" {
   value = aws_vpc.infraCar_vpc.id
 }
 
-output "infraCar_public_subnet" {
+output "infraCar_public_subnets" {
   description = "List of public subnet IDs"
   value       = aws_subnet.infraCar_public_subnets[*].id
 }
