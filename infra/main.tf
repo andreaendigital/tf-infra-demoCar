@@ -33,6 +33,10 @@ module "ec2" {
 
 }
 
+output "ec2_public_ip" {
+  description = "Public IP address of the EC2 instance, exposed from the EC2 module."
+  value       = module.ec2.ec2_public_ip 
+}
 # Target group for EC2 instance
 module "lb_target_group" {
   source                   = "./load-balancer-target-group"
