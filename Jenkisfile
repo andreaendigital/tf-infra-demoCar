@@ -14,8 +14,7 @@ pipeline {
     INVENTORY_SCRIPT  = "${ANSIBLE_DIR}/generate_inventory.sh"
     INVENTORY_FILE    = "${ANSIBLE_DIR}/inventory.ini"
     PLAYBOOK_FILE     = "${ANSIBLE_DIR}/playbook.yml"
-    INFRA_REPO_NAME     = 'tf-infra-demoCar'
-    INFRA_DIR           = 'infra'
+    TF_PATH             = 'tf-infra-demoCar/infra'
   }
 
 
@@ -26,14 +25,11 @@ pipeline {
         stage('Clone Repositories') {
             steps {
                 echo 'Cleaning workspace and cloning repositories...'
-                // Limpia el workspace antes de clonar (Correcto)
                 deleteDir()
 
                 // 1. Clona el repo de infraestructura (Terraform)
                 // Usamos 'checkout' para forzar la clonación directa en la carpeta 'infra'.
-                dir("${INFRA_DIR}") {
-                    checkout([$class: 'GitSCM', branches: [[name: 'main']], userRemoteConfigs: [[url: "https://github.com/andreaendigital/${INFRA_REPO_NAME}"]]])
-                }
+                git branch: 'main', url: 'https://github.com/andreaendigital/tf-infra-demoCar'
 
                 // 2. Clona el repo de configuración (Ansible)
                 dir("${ANSIBLE_DIR}") {
@@ -46,7 +42,7 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${INFRA_DIR}") {
+                    dir("${TF_PATH}") {
                         sh 'terraform init'
                     }
                 }
@@ -59,7 +55,7 @@ pipeline {
             }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${INFRA_DIR}") { // .tf files must be here
+                    dir("${TF_PATH}") { // .tf files must be here
                         sh 'terraform plan -out=tfplan'
                     }
                 }
@@ -72,7 +68,7 @@ pipeline {
             }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${INFRA_DIR}") {
+                    dir("${TF_PATH}") {
                         input message: '¿Do you want to apply changes on the infraestructure?'
                         sh 'terraform apply tfplan'
                     }
@@ -86,7 +82,7 @@ pipeline {
             }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${INFRA_DIR}") {
+                    dir("${TF_PATH}") {
                         input message: '¿Do you want Destroy Infraestructure?'
                         sh 'terraform destroy -auto-approve'
                     }
