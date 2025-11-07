@@ -98,6 +98,7 @@ pipeline {
                 expression { return params.DEPLOY_ANSIBLE }
             }
             steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
                 sh "chmod +x ${INVENTORY_SCRIPT}"
                 sh "${INVENTORY_SCRIPT}"
             }
