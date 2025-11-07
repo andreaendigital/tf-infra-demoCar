@@ -9,7 +9,7 @@ variable "cidr_private_subnet" {}
 
 output "infraCar_vpc_id" {
   description = "ID of the created VPC"
-  value = aws_vpc.infraCar_vpc_us_east_1.id
+  value = aws_vpc.infraCar_vpc.id
 }
 
 output "infraCar_public_subnet_ids" {
