@@ -150,7 +150,7 @@ stage('Post-Deploy: SSH EC2') {
             """
         }
     }
-}
+    }
 
     post {
             success {
@@ -161,4 +161,5 @@ stage('Post-Deploy: SSH EC2') {
             }
     }
 
+}
 }
