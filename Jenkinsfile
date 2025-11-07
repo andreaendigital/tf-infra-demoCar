@@ -123,6 +123,7 @@ pipeline {
 
             }
             steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
                     echo 'Connecting to EC2 to verify deployment...'
 
                     script {
@@ -130,10 +131,11 @@ pipeline {
                     env.EC2_PUBLIC_IP = ec2_ip
                     }
 
-                sh """
-                ssh -o StrictHostKeyChecking=no -i ~/.ssh/demoCar-jenkins_key.pem ec2-user@${EC2_PUBLIC_IP} \\
-                'systemctl status carprice'
-                """
+                    sh """
+                    ssh -o StrictHostKeyChecking=no -i ~/.ssh/demoCar-jenkins_key.pem ec2-user@${EC2_PUBLIC_IP} \\
+                    'systemctl status carprice'
+                    """
+                }
             }
         }
     }
