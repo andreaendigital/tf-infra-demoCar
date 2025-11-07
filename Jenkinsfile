@@ -117,6 +117,29 @@ pipeline {
         }
 
 
+        stage('Reload Service') {
+            when {
+                expression { return params.DEPLOY_ANSIBLE }
+            }
+            steps {
+                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
+                    script {
+                    def ec2_ip = sh(script: "cd infra && terraform output -raw public_ip", returnStdout: true).trim()
+                    env.EC2_PUBLIC_IP = ec2_ip
+                    }
+
+                    sshagent(credentials: ['ansible-ssh-key']) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ec2-user@${EC2_PUBLIC_IP} '
+                        sudo systemctl daemon-reload
+                        sudo systemctl restart carprice
+                        '
+                        """
+                    }
+                }
+            }
+        }
+
         stage('Post-Deploy: SSH EC2') {
             when {
                 expression { return params.DEPLOY_ANSIBLE }
@@ -131,10 +154,12 @@ pipeline {
                     env.EC2_PUBLIC_IP = ec2_ip
                     }
 
-                    sh """
-                    ssh -o StrictHostKeyChecking=no -i ~/.ssh/demoCar-jenkins_key.pem ec2-user@${EC2_PUBLIC_IP} \\
-                    'systemctl status carprice'
-                    """
+                    sshagent(credentials: ['ansible-ssh-key']) {
+                        sh """
+                        ssh -o StrictHostKeyChecking=no ec2-user@${EC2_PUBLIC_IP} \\
+                        'systemctl status carprice'
+                        """
+                    }
                 }
             }
         }
