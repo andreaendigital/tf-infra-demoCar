@@ -83,7 +83,7 @@ pipeline {
         steps {
             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
             dir('infra') {
-                input message: '¿Destruir infraestructura?'
+                input message: '¿Do you want Destroy Infraestructure?'
                 sh 'terraform destroy -auto-approve'
             }
             }
