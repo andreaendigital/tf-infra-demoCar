@@ -40,7 +40,7 @@ module "lb_target_group" {
   lb_target_group_port     = 5000
   lb_target_group_protocol = "HTTP"
   vpc_id                   = module.networking.infraCar_vpc_id
-  ec2_instance_id          = module.ec2.infraCar_ec2_instance_ip
+  ec2_instance_id          = module.ec2.infraCar_ec2_instance_id
 }
 
 # Application Load Balancer module
@@ -53,7 +53,7 @@ module "alb" {
   subnet_ids                = tolist(module.networking.infraCar_public_subnets)
   tag_name                  = "infraCar-alb"
   lb_target_group_arn       = module.lb_target_group.infraCar_lb_target_group_arn
-  ec2_instance_id           = module.ec2.infraCar_ec2_instance_ip
+  ec2_instance_id           = module.ec2.infraCar_ec2_instance_id
   lb_listner_port           = 5000
   lb_listner_protocol       = "HTTP"
   lb_listner_default_action = "forward"
