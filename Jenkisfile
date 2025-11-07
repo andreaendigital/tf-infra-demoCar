@@ -14,7 +14,7 @@ pipeline {
     INVENTORY_SCRIPT  = "${ANSIBLE_DIR}/generate_inventory.sh"
     INVENTORY_FILE    = "${ANSIBLE_DIR}/inventory.ini"
     PLAYBOOK_FILE     = "${ANSIBLE_DIR}/playbook.yml"
-    TF_PATH             = 'tf-infra-demoCar/infra'
+    
   }
 
 
@@ -42,7 +42,7 @@ pipeline {
         stage('Terraform Init') {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${TF_PATH}") {
+                    dir('infra') {
                         sh 'terraform init'
                     }
                 }
@@ -55,7 +55,7 @@ pipeline {
             }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${TF_PATH}") { // .tf files must be here
+                    dir('infra') { // .tf files must be here
                         sh 'terraform plan -out=tfplan'
                     }
                 }
@@ -68,7 +68,7 @@ pipeline {
             }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${TF_PATH}") {
+                    dir('infra') {
                         input message: '¿Do you want to apply changes on the infraestructure?'
                         sh 'terraform apply tfplan'
                     }
@@ -82,7 +82,7 @@ pipeline {
             }
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    dir("${TF_PATH}") {
+                    dir('infra') {
                         input message: '¿Do you want Destroy Infraestructure?'
                         sh 'terraform destroy -auto-approve'
                     }
