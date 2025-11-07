@@ -12,12 +12,12 @@ output "infraCar_vpc_id" {
   value = aws_vpc.infraCar_vpc.id
 }
 
-output "infraCar_public_subnet_ids" {
+output "infraCar_public_subnet" {
   description = "List of public subnet IDs"
   value       = aws_subnet.infraCar_public_subnets[*].id
 }
 
-output "infraCar_public_subnet_cidrs_blocks" {
+output "public_subnet_cidr_block"{
   description = "List of public subnet CIDR blocks"
   value       = aws_subnet.infraCar_public_subnets[*].cidr_block
 }
