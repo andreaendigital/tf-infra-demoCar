@@ -117,27 +117,27 @@ pipeline {
         }
 
 // En el Jenkinsfile
-stage('Post-Deploy: SSH EC2') {
+    stage('Post-Deploy: SSH EC2') {
     // Solo se ejecuta si el despliegue de Ansible fue solicitado
-    when {
-        expression { return params.DEPLOY_ANSIBLE }
-    }
-    steps {
-        echo 'Connecting to EC2 to verify deployment...'
-
-        // 1. INYECTAR CREDENCIALES AWS para TERRAFORM OUTPUT
-        withCredentials([
-            // REEMPLAZA 'aws-creds-id' con el ID de tu credencial AWS real
-            [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id'] 
-        ]) {
-            script {
-                // Leer la IP pública del EC2 usando el output que ya corregiste
-                // Nota: Usamos 'ec2_public_ip' ya que fue expuesto en el módulo raíz.
-                def ec2_ip = sh(script: "cd infra && terraform output -raw ec2_public_ip", returnStdout: true).trim()
-                env.EC2_PUBLIC_IP = ec2_ip
-            }
+        when {
+            expression { return params.DEPLOY_ANSIBLE }
         }
-        
+        steps {
+            echo 'Connecting to EC2 to verify deployment...'
+
+            // 1. INYECTAR CREDENCIALES AWS para TERRAFORM OUTPUT
+            withCredentials([
+                // REEMPLAZA 'aws-creds-id' con el ID de tu credencial AWS real
+                [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id'] 
+            ]) {
+                script {
+                    // Leer la IP pública del EC2 usando el output que ya corregiste
+                    // Nota: Usamos 'ec2_public_ip' ya que fue expuesto en el módulo raíz.
+                    def ec2_ip = sh(script: "cd infra && terraform output -raw ec2_public_ip", returnStdout: true).trim()
+                    env.EC2_PUBLIC_IP = ec2_ip
+                }
+            }
+            
         // 2. INYECTAR CREDENCIAL SSH para la conexión de VERIFICACIÓN
         // Necesitas el mismo sshagent que usaste para Ansible
         // REEMPLAZA 'ansible-ssh-key' con el ID de tu credencial SSH real
@@ -150,7 +150,6 @@ stage('Post-Deploy: SSH EC2') {
             """
         }
     }
-    }
 
     post {
             success {
@@ -160,6 +159,11 @@ stage('Post-Deploy: SSH EC2') {
             echo 'Deployment failed. Check logs and Terraform state.'
             }
     }
+
+
+    }
+
+
 
 }
 }
