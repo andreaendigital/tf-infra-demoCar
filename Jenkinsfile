@@ -116,27 +116,41 @@ pipeline {
             }
         }
 
+// En el Jenkinsfile
+stage('Post-Deploy: SSH EC2') {
+    // Solo se ejecuta si el despliegue de Ansible fue solicitado
+    when {
+        expression { return params.DEPLOY_ANSIBLE }
+    }
+    steps {
+        echo 'Connecting to EC2 to verify deployment...'
 
-        stage('Post-Deploy: SSH EC2') {
-            when {
-                expression { return params.DEPLOY_ANSIBLE }
-
-            }
-            steps {
-                    echo 'Connecting to EC2 to verify deployment...'
-
-                    script {
-                    def ec2_ip = sh(script: "cd infra && terraform output -raw public_ip", returnStdout: true).trim()
-                    env.EC2_PUBLIC_IP = ec2_ip
-                    }
-
-                sh """
-                ssh -o StrictHostKeyChecking=no -i ~/.ssh/demoCar-jenkins_key.pem ec2-user@${EC2_PUBLIC_IP} \\
-                'systemctl status carprice'
-                """
+        // 1. INYECTAR CREDENCIALES AWS para TERRAFORM OUTPUT
+        withCredentials([
+            // REEMPLAZA 'aws-creds-id' con el ID de tu credencial AWS real
+            [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-creds-id'] 
+        ]) {
+            script {
+                // Leer la IP pública del EC2 usando el output que ya corregiste
+                // Nota: Usamos 'ec2_public_ip' ya que fue expuesto en el módulo raíz.
+                def ec2_ip = sh(script: "cd infra && terraform output -raw ec2_public_ip", returnStdout: true).trim()
+                env.EC2_PUBLIC_IP = ec2_ip
             }
         }
+        
+        // 2. INYECTAR CREDENCIAL SSH para la conexión de VERIFICACIÓN
+        // Necesitas el mismo sshagent que usaste para Ansible
+        // REEMPLAZA 'ansible-ssh-key' con el ID de tu credencial SSH real
+        sshagent(credentials: ['ansible-ssh-key']) {
+            sh """
+            # Usamos 'ssh -A' para reenviar la llave inyectada por sshagent.
+            # NO NECESITAS el argumento '-i /ruta/a/la/llave.pem' cuando usas sshagent.
+            ssh -A -o StrictHostKeyChecking=no ec2-user@${env.EC2_PUBLIC_IP} \\
+            'systemctl status carprice'
+            """
+        }
     }
+}
 
     post {
             success {
