@@ -39,31 +39,10 @@ variable "eu_availability_zone" {
 }
 
 
-# EC2 Instance
-
-
-variable "subnet_id" {
-  description = "Subnet ID where the EC2 instance will be launched"
-}
-
-variable "sg_enable_ssh_https" {
-  description = "Security Group ID that allows SSH and HTTP access"
+#EC2
+variable "ec2_ami_id" {
+  type        = string
+  description = "AMI ID to use for the EC2 instance"
 }
 
 
-
-
-# Load Balancer
-variable "lb_name" {
-  description = "Name of the Load Balancer"
-}
-
-variable "lb_type" {
-  description = "Type of Load Balancer (application or network)"
-}
-
-
-variable "subnet_ids" {
-  description = "List of subnet IDs for the Load Balancer"
-  type        = list(string)
-}
