@@ -21,8 +21,8 @@ output "infraCar_ec2_instance_id" {
 }
 
 output "infraCar_ec2_instance_ip" { 
-  description = "Private IP address of the EC2 instance"
-  value       = aws_instance.infraCar_ec2.private_ip 
+  description = "Private IP address of the EC2 instance"
+  value       = aws_instance.infraCar_ec2.private_ip 
 }
 
 #EC2 Instance Resource
