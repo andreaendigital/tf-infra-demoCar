@@ -110,7 +110,7 @@ pipeline {
                 expression { return params.DEPLOY_ANSIBLE }
             }
             steps {
-                sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE}"
+                sh "ansible-playbook -i ${INVENTORY_FILE} ${PLAYBOOK_FILE} -e 'ansible_ssh_common_args=-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'"
             }
         }
 
