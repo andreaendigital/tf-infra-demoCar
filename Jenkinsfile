@@ -70,8 +70,7 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
                     dir('infra') {
-                        input message: '¿Do you want to apply changes on the infraestructure?'
-                        sh 'terraform apply tfplan'
+                        sh 'terraform apply -auto-approve tfplan'
                     }
                 }
             }
@@ -84,7 +83,6 @@ pipeline {
             steps {
                 withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
                     dir('infra') {
-                        input message: '¿Do you want Destroy Infraestructure?'
                         sh 'terraform destroy -auto-approve'
                     }
                 }
@@ -116,28 +114,7 @@ pipeline {
             }
         }
 
-        stage('Post-Deploy: SSH EC2') {
-            when {
-                expression { return params.DEPLOY_ANSIBLE }
-            }
-            steps {
-                echo 'Connecting to EC2 to verify deployment...'
 
-                withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-jenkins-carprice']]) {
-                    script {
-                        def ec2_ip = sh(script: "cd infra && terraform output -raw ec2_public_ip", returnStdout: true).trim()
-                        env.EC2_PUBLIC_IP = ec2_ip
-                    }
-                }
-                
-                sshagent(credentials: ['ansible-ssh-key']) {
-                    sh """
-                        ssh -A -o StrictHostKeyChecking=no ec2-user@${env.EC2_PUBLIC_IP} \\
-                        'systemctl status carprice'
-                    """
-                }
-            }
-        }
     }
 
 
