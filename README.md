@@ -19,6 +19,7 @@ This project implements a modern DevOps architecture with:
 - **Automated Application Deployment**: Ansible playbooks for Flask application setup
 - **CI/CD Integration**: Jenkins pipeline with parameterized builds
 - **Service Management**: Systemd service configuration for production deployment
+- **Observability & Monitoring**: Integrated Splunk Observability Cloud for infrastructure and application monitoring
 
 ## 📋 Prerequisites
 
@@ -51,7 +52,8 @@ infra/
 ├── rds/                # RDS MySQL database
 ├── load-balancer/      # Application Load Balancer
 ├── load-balancer-target-group/  # ALB target groups
-└── s3/                 # S3 bucket for remote state
+├── s3/                 # S3 bucket for remote state
+└── monitoring.tf       # Splunk Observability Cloud integration
 ```
 
 ## 🔧 Setup Instructions
@@ -117,8 +119,10 @@ git clone https://github.com/andreaendigital/configManagement-carPrice
 4. **Terraform Apply**: Provision AWS resources (with approval gate)
 5. **Generate Ansible Inventory**: Create dynamic inventory from Terraform output
 6. **Run Ansible Playbook**: Deploy and configure Flask application
-7. **Reload Service**: Restart application service with updated configuration
-8. **Post-Deploy Verification**: Verify application service status
+7. **Deploy Monitoring**: Install Splunk OpenTelemetry Collector via Ansible
+8. **Reload Service**: Restart application service with updated configuration
+9. **Post-Deploy Verification**: Verify application and monitoring service status
+10. **Send Metrics**: Pipeline success/failure metrics sent to Splunk Observability
 
 ### Manual Deployment
 
@@ -140,16 +144,52 @@ ansible-playbook -i inventory.ini playbook.yml
 
 ## 🔍 Monitoring & Verification
 
+### Observability & Monitoring
+
+**Splunk Observability Cloud Integration:**
+- **Infrastructure Metrics**: EC2 CPU, memory, disk, network monitoring
+- **Application Metrics**: Flask app performance metrics (ports 3000, 5002)
+- **Pipeline Metrics**: Jenkins deployment success/failure tracking
+- **Real-time Dashboards**: https://app.us1.signalfx.com
+
+**Monitoring Variables:**
+```hcl
+# Terraform Variables (infra/monitoring.tf)
+variable "splunk_observability_token" {
+  description = "Splunk Observability Cloud token"
+  type        = string
+  default     = "PZuf3J0L2Op_Qj9hpAJzlw"
+  sensitive   = true
+}
+
+variable "splunk_realm" {
+  description = "Splunk realm"
+  type        = string
+  default     = "us1"
+}
+```
+
+**Ansible Monitoring Role:**
+```yaml
+# configManagement-carPrice/roles/splunk_monitoring/vars/main.yml
+splunk_token: "PZuf3J0L2Op_Qj9hpAJzlw"
+splunk_realm: "us1"
+```
+
 ### Application Health Check
 ```bash
 # Check service status
 systemctl status carprice
+systemctl status splunk-otel-collector
 
 # View application logs
 journalctl -u carprice -f
+journalctl -u splunk-otel-collector -f
 
-# Test application endpoint
-curl http://<EC2_PUBLIC_IP>:5000
+# Test application endpoints
+curl http://<EC2_PUBLIC_IP>:3000/health  # Frontend
+curl http://<EC2_PUBLIC_IP>:5002/health  # Backend
+curl http://<EC2_PUBLIC_IP>:5002/metrics/json  # Metrics
 ```
 
 ### Infrastructure Verification
@@ -159,6 +199,9 @@ terraform show
 
 # List AWS resources
 aws ec2 describe-instances --filters "Name=tag:Project,Values=infraCar"
+
+# Verify monitoring configuration
+terraform output splunk_config
 ```
 
 ## 📁 Project Structure
@@ -171,6 +214,7 @@ tf-infra-demoCar/
 │   ├── variables.tf          # Input variables
 │   ├── outputs.tf            # Output values
 │   ├── terraform.tfvars      # Variable values
+│   ├── monitoring.tf         # Splunk Observability configuration
 │   └── remote_backend_s3.tf  # Remote state configuration
 ├── Jenkinsfile               # CI/CD pipeline definition
 ├── .gitignore               # Git ignore patterns
@@ -200,6 +244,8 @@ tf-infra-demoCar/
 - **Terraform**: Local `.terraform/` directory
 - **Ansible**: Ansible playbook output
 - **Application**: `/var/log/syslog` and `journalctl -u carprice`
+- **Monitoring**: `journalctl -u splunk-otel-collector`
+- **Splunk Dashboards**: https://app.us1.signalfx.com
 
 ## 🤝 Contributing
 
