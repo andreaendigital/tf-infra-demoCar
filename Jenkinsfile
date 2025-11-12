@@ -14,6 +14,7 @@ pipeline {
     INVENTORY_SCRIPT  = "${ANSIBLE_DIR}/generate_inventory.sh"
     INVENTORY_FILE    = "${ANSIBLE_DIR}/inventory.ini"
     PLAYBOOK_FILE     = "${ANSIBLE_DIR}/playbook.yml"
+    DISCORD_WEBHOOK_URL ="https://discord.com/api/webhooks/1437993582756888648/wG9NzvbVm2zkXK6BYNItaS38CcpGo5tZrV8idq5Gk3aKQReQOyMa44mavFY23oqQJFyj"
     
   }
 
@@ -27,14 +28,15 @@ pipeline {
                 echo 'Cleaning workspace and cloning repositories...'
                 deleteDir()
 
-                // 1. Clona el repo de infraestructura (Terraform)
-                // Usamos 'checkout' para forzar la clonación directa en la carpeta 'infra'.
+               //1. Clone Repo (Terraform)
                 git branch: 'main', url: 'https://github.com/andreaendigital/tf-infra-demoCar'
 
-                // 2. Clona el repo de configuración (Ansible)
+                // 2. Clone Repo (Ansible)
                 dir("${ANSIBLE_DIR}") {
                     checkout([$class: 'GitSCM', branches: [[name: 'main']], userRemoteConfigs: [[url: 'https://github.com/andreaendigital/configManagement-carPrice']]])
                 }
+          
+
             }
         }
 
@@ -120,6 +122,9 @@ pipeline {
 
     post {
         success {
+            echo 'Deployment completed successfully!'
+
+            // 1. SignalFX Notification
             script {
                 sh '''
                     curl -X POST https://ingest.us1.signalfx.com/v2/datapoint \
@@ -128,9 +133,28 @@ pipeline {
                     -d '{"gauge":[{"metric":"jenkins.pipeline.success","value":1,"dimensions":{"job":"''' + env.JOB_NAME + '''","build":"''' + env.BUILD_NUMBER + '''","result":"success"}}]}'
                 '''
             }
+
+            // 2. Discord Notification
+            script {
+                sh '''
+                    # Discord Message with Markdown 
+                    MESSAGE=" Success: The pipeline **${JOB_NAME}** finish correctly #${BUILD_NUMBER}."
+                    
+                    # Use cURL to send Webhook
+                    curl -X POST ${DISCORD_WEBHOOK_URL} \
+                         -H 'Content-Type: application/json' \
+                         -d "{\\"username\\": \\"Jenkins Bot\\", \\"content\\": \\"${MESSAGE}\\", \\"embeds\\": [ { \\"description\\": \\"[Ver en Jenkins](${BUILD_URL})\\", \\"color\\": 65280 } ]}"
+                '''
+            }
+
             echo 'Deployment completed successfully!'
+
         }
+
+
         failure {
+            echo 'Deployment failed. Check logs and Terraform state.'
+            // 1. SignalFX Notification
             script {
                 sh '''
                     curl -X POST https://ingest.us1.signalfx.com/v2/datapoint \
@@ -139,7 +163,23 @@ pipeline {
                     -d '{"gauge":[{"metric":"jenkins.pipeline.failure","value":1,"dimensions":{"job":"''' + env.JOB_NAME + '''","build":"''' + env.BUILD_NUMBER + '''","result":"failure"}}]}'
                 '''
             }
+
+            // 2. Discord Notification
+            script {
+                sh '''
+                    # Discord Message with Markdown 
+                    MESSAGE="Deployment failed. Pipeline: **${JOB_NAME}** -  #${BUILD_NUMBER}."
+                    
+                    curl -X POST ${DISCORD_WEBHOOK_URL} \
+                         -H 'Content-Type: application/json' \
+                         -d "{\\"username\\": \\"Jenkins Bot\\", \\"content\\": \\"${MESSAGE}\\", \\"embeds\\": [ { \\"description\\": \\"[Revisar el Fallo](${BUILD_URL})\\", \\"color\\": 16711680 } ]}"
+                '''
+            }
+
+
             echo 'Deployment failed. Check logs and Terraform state.'
+
+
         }
     }
 }
