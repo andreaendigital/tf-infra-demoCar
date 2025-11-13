@@ -54,6 +54,7 @@ infra/
 ├── load-balancer-target-group/  # ALB target groups
 ├── s3/                 # S3 bucket for remote state
 └── monitoring.tf       # Splunk Observability Cloud integration
+└── extrafiles.tf       # Various Terraform files such as main, provider, outputs, etc
 ```
 
 ## 🔧 Setup Instructions
