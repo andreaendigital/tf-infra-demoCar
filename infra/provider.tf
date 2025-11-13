@@ -7,7 +7,7 @@ terraform {
   }
 }
 
-# Configure the AWS Provider
+# Connection to AWS provider
 provider "aws" {
   region = "us-east-1"
   #profile = "terraform-user"
